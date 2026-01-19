@@ -503,14 +503,15 @@ class TamesukeProvisioner:
     def _start_lxc(self, vmid: int):
         """
         LXCを起動
-        
+
         Args:
             vmid: VMID
         """
-        self.proxmox.nodes(self.node).lxc(vmid).status.start.post()
-        
-        # 起動待機
-        time.sleep(3)
+        # start.post()はタスクID（UPID）を返す
+        upid = self.proxmox.nodes(self.node).lxc(vmid).status.start.post()
+
+        # タスク完了を待機
+        self._wait_for_task(upid, timeout=60)
     
     def _wait_for_ready(self, url: str, timeout: int = 300):
         """
