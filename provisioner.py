@@ -4,12 +4,12 @@ Tamesuke プロビジョニングスクリプト
 File Server方式（WebDAV経由でメタデータ配信）
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 import time
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 
@@ -135,14 +135,85 @@ class TamesukeProvisioner:
             raise ValueError(
                 f"サブドメインはハイフンで始まる・終わることはできません: {subdomain}"
             )
-    
+
+    def _rollback(
+        self,
+        resources: Dict[str, Any],
+        subdomain: str
+    ):
+        """
+        プロビジョニング失敗時のロールバック処理
+        作成済みのリソースを逆順でクリーンアップ
+
+        Args:
+            resources: 作成済みリソースの辞書
+            subdomain: サブドメイン
+        """
+        print("\n[ROLLBACK] ロールバック処理を開始します...")
+
+        # LXCコンテナの削除（起動済みの場合は停止してから削除）
+        if 'vmid' in resources:
+            vmid = resources['vmid']
+            try:
+                print(f"   - LXC {vmid} を停止中...")
+                try:
+                    self.proxmox.nodes(self.node).lxc(vmid).status.stop.post()
+                    time.sleep(3)
+                except Exception:
+                    pass  # 既に停止している場合は無視
+
+                print(f"   - LXC {vmid} を削除中...")
+                self.proxmox.nodes(self.node).lxc(vmid).delete()
+                print(f"   - [OK] LXC {vmid} を削除しました")
+            except Exception as e:
+                print(f"   - [WARN] LXC {vmid} の削除に失敗: {e}")
+
+        # メタデータファイルの削除
+        if 'metadata_uploaded' in resources:
+            vmid = resources.get('vmid')
+            if vmid:
+                try:
+                    import requests
+                    url = f'http://{self.fileserver_host}:{self.fileserver_port}/upload/metadata-{vmid}.json'
+                    print(f"   - メタデータファイル削除中...")
+                    requests.delete(url, timeout=10)
+                    print(f"   - [OK] メタデータファイルを削除しました")
+                except Exception as e:
+                    print(f"   - [WARN] メタデータファイルの削除に失敗: {e}")
+
+        # DNSレコードの削除
+        if 'dns_record_id' in resources:
+            try:
+                print(f"   - DNSレコード削除中...")
+                self.cf.dns.records.delete(
+                    resources['dns_record_id'],
+                    zone_id=self.cloudflare_zone_id
+                )
+                print(f"   - [OK] DNSレコードを削除しました")
+            except Exception as e:
+                print(f"   - [WARN] DNSレコードの削除に失敗: {e}")
+
+        # Cloudflare Tunnelの削除
+        if 'tunnel_id' in resources:
+            try:
+                print(f"   - Tunnel削除中...")
+                self.cf.zero_trust.tunnels.cloudflared.delete(
+                    resources['tunnel_id'],
+                    account_id=self.cloudflare_account_id
+                )
+                print(f"   - [OK] Tunnelを削除しました")
+            except Exception as e:
+                print(f"   - [WARN] Tunnelの削除に失敗: {e}")
+
+        print("[ROLLBACK] ロールバック処理が完了しました\n")
+
     def provision(
         self,
         customer_email: str,
         oss_type: str,
         subdomain: str,
         duration_days: int
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         メインプロビジョニング処理
         
@@ -174,60 +245,67 @@ class TamesukeProvisioner:
         # 接続確認
         if self.proxmox is None or self.cf is None:
             self.connect()
-        
+
+        # ロールバック用にリソースをトラッキング
+        created_resources: Dict[str, Any] = {}
+
         try:
             # Step 1: VMID割り当て
             vmid = self._get_next_vmid()
             print(f"1. [OK] VMID割り当て: {vmid}")
-            
+
             # Step 2: Cloudflare Tunnel作成
             tunnel = self._create_tunnel(vmid, subdomain)
             tunnel_id = tunnel.id
+            created_resources['tunnel_id'] = tunnel_id
             print(f"2. [OK] Tunnel作成: {tunnel_id}")
-            
+
             # Step 3: Tunnel Token取得
             tunnel_token = self._get_tunnel_token(tunnel)
             print(f"3. [OK] Tunnel Token取得")
-            
+
             # Step 4: Tunnel設定
             self._configure_tunnel(tunnel_id, subdomain, oss_type)
             print(f"4. [OK] Tunnelルーティング設定")
-            
+
             # Step 5: DNS登録
-            self._create_dns_record(subdomain, tunnel_id)
+            dns_record_id = self._create_dns_record(subdomain, tunnel_id)
+            created_resources['dns_record_id'] = dns_record_id
             print(f"5. [OK] DNS登録: {subdomain}.{self.domain}")
-            
+
             # Step 6: メタデータJSON作成
             metadata = self._create_metadata(
                 vmid, customer_email, subdomain, oss_type, tunnel_token
             )
             print(f"6. [OK] メタデータJSON作成")
-            
+
             # Step 7: File Serverへアップロード
             self._upload_metadata(vmid, metadata)
+            created_resources['vmid'] = vmid
+            created_resources['metadata_uploaded'] = True
             print(f"7. [OK] File Serverへアップロード")
-            
+
             # Step 8: LXCクローン
             self._clone_lxc(vmid, oss_type, subdomain)
             print(f"8. [OK] LXCクローン作成")
-            
+
             # Step 9: LXC起動
             self._start_lxc(vmid)
             print(f"9. [OK] LXC起動")
-            
+
             # Step 10: 初期化完了待機
             url = f"https://{subdomain}.{self.domain}"
             print(f"10. [WAIT] 初期化完了待機中... (最大5分)")
             self._wait_for_ready(url, timeout=300)
             print(f"10. [OK] サービス起動完了")
-            
+
             result = {
                 'vmid': vmid,
                 'tunnel_id': tunnel_id,
                 'url': url,
                 'status': 'active'
             }
-            
+
             print(f"\n{'='*60}")
             print(f"プロビジョニング完了!")
             print(f"{'='*60}")
@@ -235,12 +313,12 @@ class TamesukeProvisioner:
             print(f"VMID: {vmid}")
             print(f"Tunnel ID: {tunnel_id}")
             print(f"{'='*60}\n")
-            
+
             return result
-            
+
         except Exception as e:
             print(f"\n[ERROR] エラーが発生しました: {e}")
-            # TODO: ロールバック処理
+            self._rollback(created_resources, subdomain)
             raise
     
     def _get_next_vmid(self) -> int:
@@ -347,21 +425,24 @@ class TamesukeProvisioner:
             config=config
         )
     
-    def _create_dns_record(self, subdomain: str, tunnel_id: str):
+    def _create_dns_record(self, subdomain: str, tunnel_id: str) -> str:
         """
         Cloudflare DNSレコードを作成
         既存の同名レコードがあれば削除してから作成
-        
+
         Args:
             subdomain: サブドメイン
             tunnel_id: Tunnel ID
+
+        Returns:
+            作成したDNSレコードのID
         """
         # 既存DNSレコードをチェック
         existing_records = self.cf.dns.records.list(
             zone_id=self.cloudflare_zone_id,
             name=f"{subdomain}.{self.domain}"
         )
-        
+
         # 同名のレコードがあれば削除
         for record in existing_records:
             if record.name == f"{subdomain}.{self.domain}":
@@ -370,7 +451,7 @@ class TamesukeProvisioner:
                     record.id,
                     zone_id=self.cloudflare_zone_id
                 )
-        
+
         # 新しいDNSレコード作成
         dns_record = {
             'type': 'CNAME',
@@ -379,11 +460,13 @@ class TamesukeProvisioner:
             'ttl': 1,  # Automatic
             'proxied': True
         }
-        
-        self.cf.dns.records.create(
+
+        result = self.cf.dns.records.create(
             zone_id=self.cloudflare_zone_id,
             **dns_record
         )
+
+        return result.id
     
     def _create_metadata(
         self,
@@ -414,7 +497,7 @@ class TamesukeProvisioner:
             'oss_type': oss_type,
             'url': f'https://{subdomain}.{self.domain}',
             'tunnel_token': tunnel_token,
-            'created_at': datetime.utcnow().isoformat() + 'Z'
+            'created_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         }
         
         return metadata
