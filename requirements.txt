@@ -1,0 +1,16 @@
+# タメスケ プロビジョニングスクリプト 必要パッケージ
+
+# Proxmox API
+proxmoxer>=2.0.0
+
+# HTTP通信
+requests>=2.31.0
+
+# Cloudflare API（新しいSDK）
+cloudflare>=3.0.0
+
+# 環境変数管理
+python-dotenv>=1.0.0
+
+# 型チェック（開発用、オプション）
+# mypy>=1.7.0
