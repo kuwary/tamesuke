@@ -442,41 +442,76 @@ class TamesukeProvisioner:
         if response.status_code not in [200, 201, 204]:
             raise Exception(f"File Serverへのアップロード失敗: {response.status_code}")
     
+    def _wait_for_task(self, upid: str, timeout: int = 120):
+        """
+        Proxmoxタスクの完了を待機
+
+        Args:
+            upid: タスクID（UPID）
+            timeout: タイムアウト秒数（デフォルト: 120秒）
+
+        Returns:
+            True: タスク完了
+
+        Raises:
+            Exception: タスク失敗またはタイムアウト
+        """
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            task_status = self.proxmox.nodes(self.node).tasks(upid).status.get()
+
+            if task_status['status'] == 'stopped':
+                if task_status.get('exitstatus') == 'OK':
+                    return True
+                else:
+                    raise Exception(
+                        f"タスク失敗: {task_status.get('exitstatus')}"
+                    )
+
+            elapsed = int(time.time() - start_time)
+            print(f"   クローン中... {elapsed}秒経過", end='\r')
+            time.sleep(2)
+
+        raise Exception(f"タスクタイムアウト: {timeout}秒以内に完了しませんでした")
+
     def _clone_lxc(self, vmid: int, oss_type: str, subdomain: str):
         """
         テンプレートからLXCをクローン
-        
+
         Args:
             vmid: 新しいVMID
             oss_type: OSSタイプ
             subdomain: サブドメイン（ホスト名として使用）
         """
         template_id = self.template_map[oss_type]
-        
+
         # ホスト名 = サブドメイン
         hostname = subdomain
-        
-        self.proxmox.nodes(self.node).lxc(template_id).clone.post(
+
+        # clone.post()はタスクID（UPID）を返す
+        upid = self.proxmox.nodes(self.node).lxc(template_id).clone.post(
             newid=vmid,
             hostname=hostname,
             full=1,  # フルクローン
             storage='vm-storage'  # ZFS保護ストレージ
         )
-        
-        # クローン完了待機
-        time.sleep(5)
+
+        # タスク完了を待機
+        self._wait_for_task(upid)
     
     def _start_lxc(self, vmid: int):
         """
         LXCを起動
-        
+
         Args:
             vmid: VMID
         """
-        self.proxmox.nodes(self.node).lxc(vmid).status.start.post()
-        
-        # 起動待機
-        time.sleep(3)
+        # start.post()はタスクID（UPID）を返す
+        upid = self.proxmox.nodes(self.node).lxc(vmid).status.start.post()
+
+        # タスク完了を待機
+        self._wait_for_task(upid, timeout=60)
     
     def _wait_for_ready(self, url: str, timeout: int = 300):
         """
