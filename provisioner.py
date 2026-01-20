@@ -204,7 +204,7 @@ class TamesukeProvisioner:
             print(f"6. [OK] メタデータJSON作成")
             
             # Step 7: File Serverへアップロード
-            self._upload_metadata(vmid, metadata)
+            self._upload_metadata(subdomain, metadata)
             print(f"7. [OK] File Serverへアップロード")
             
             # Step 8: LXCクローン
@@ -419,17 +419,17 @@ class TamesukeProvisioner:
         
         return metadata
     
-    def _upload_metadata(self, vmid: int, metadata: dict):
+    def _upload_metadata(self, subdomain: str, metadata: dict):
         """
         File Serverにメタデータをアップロード
-        
+
         Args:
-            vmid: VMID
+            subdomain: サブドメイン名
             metadata: メタデータ辞書
         """
         import requests
-        
-        url = f'http://{self.fileserver_host}:{self.fileserver_port}/upload/metadata-{vmid}.json'
+
+        url = f'http://{self.fileserver_host}:{self.fileserver_port}/upload/metadata-{subdomain}.json'
         metadata_json = json.dumps(metadata, indent=2)
         
         response = requests.put(
