@@ -539,6 +539,108 @@ class TamesukeProvisioner:
         
         raise Exception(f"タイムアウト: {timeout}秒以内にサービスが起動しませんでした")
 
+    def cleanup(self, vmid: int, tunnel_id: str, subdomain: str) -> None:
+        """
+        プロビジョニング済みリソースを削除する。
+
+        各ステップは独立して実行し、1つ失敗しても残りを続行する。
+
+        Args:
+            vmid: 削除対象の VMID
+            tunnel_id: 削除対象の Cloudflare Tunnel ID
+            subdomain: 削除対象のサブドメイン
+        """
+        import requests
+
+        print(f"\n{'='*60}")
+        print(f"クリーンアップ開始")
+        print(f"{'='*60}")
+        print(f"VMID: {vmid}")
+        print(f"Tunnel ID: {tunnel_id}")
+        print(f"サブドメイン: {subdomain}")
+        print(f"{'='*60}\n")
+
+        # 接続確認
+        if self.proxmox is None or self.cf is None:
+            self.connect()
+
+        errors: list[str] = []
+
+        # Step 1: LXC停止
+        try:
+            upid = self.proxmox.nodes(self.node).lxc(vmid).status.stop.post()
+            self._wait_for_task(upid, timeout=60)
+            print(f"1. [OK] LXC停止: {vmid}")
+        except Exception as e:
+            msg = f"1. [WARN] LXC停止失敗: {e}"
+            print(msg)
+            errors.append(msg)
+
+        # Step 2: LXC削除
+        try:
+            upid = self.proxmox.nodes(self.node).lxc(vmid).delete()
+            self._wait_for_task(upid, timeout=120)
+            print(f"2. [OK] LXC削除: {vmid}")
+        except Exception as e:
+            msg = f"2. [WARN] LXC削除失敗: {e}"
+            print(msg)
+            errors.append(msg)
+
+        # Step 3: Cloudflare Tunnel削除
+        try:
+            self.cf.zero_trust.tunnels.cloudflared.delete(
+                tunnel_id,
+                account_id=self.cloudflare_account_id,
+            )
+            print(f"3. [OK] Tunnel削除: {tunnel_id}")
+        except Exception as e:
+            msg = f"3. [WARN] Tunnel削除失敗: {e}"
+            print(msg)
+            errors.append(msg)
+
+        # Step 4: DNS CNAMEレコード削除
+        try:
+            fqdn = f"{subdomain}.{self.domain}"
+            existing_records = self.cf.dns.records.list(
+                zone_id=self.cloudflare_zone_id,
+                name=fqdn,
+            )
+            for record in existing_records:
+                if record.name == fqdn:
+                    self.cf.dns.records.delete(
+                        record.id,
+                        zone_id=self.cloudflare_zone_id,
+                    )
+            print(f"4. [OK] DNSレコード削除: {fqdn}")
+        except Exception as e:
+            msg = f"4. [WARN] DNSレコード削除失敗: {e}"
+            print(msg)
+            errors.append(msg)
+
+        # Step 5: メタデータファイル削除
+        try:
+            url = (
+                f"http://{self.fileserver_host}:{self.fileserver_port}"
+                f"/upload/metadata-{subdomain}.json"
+            )
+            response = requests.delete(url, timeout=10)
+            if response.status_code not in [200, 204, 404]:
+                raise Exception(f"HTTP {response.status_code}")
+            print(f"5. [OK] メタデータ削除: metadata-{subdomain}.json")
+        except Exception as e:
+            msg = f"5. [WARN] メタデータ削除失敗: {e}"
+            print(msg)
+            errors.append(msg)
+
+        print(f"\n{'='*60}")
+        if errors:
+            print(f"クリーンアップ完了（警告あり: {len(errors)}件）")
+            for err in errors:
+                print(f"  {err}")
+        else:
+            print(f"クリーンアップ完了!")
+        print(f"{'='*60}\n")
+
 
 # ========================================
 # 使用例

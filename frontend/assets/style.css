@@ -1,0 +1,495 @@
+/* ========================================
+   Tamesuke — スタイルシート
+   モバイルファースト
+   ======================================== */
+
+/* --- リセット・ベース --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Noto Sans JP", sans-serif;
+  color: #1e293b;
+  background: #f8fafc;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h2 {
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* --- ボタン --- */
+.btn {
+  display: inline-block;
+  padding: 12px 32px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.btn:hover {
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- ヘッダー --- */
+.header {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.logo:hover {
+  text-decoration: none;
+}
+
+.header nav {
+  display: flex;
+  gap: 20px;
+}
+
+.header nav a {
+  color: #475569;
+  font-size: 0.875rem;
+}
+
+.header nav a:hover {
+  color: #2563eb;
+}
+
+/* --- ヒーロー --- */
+.hero {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #fff;
+  padding: 64px 0;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 1.75rem;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.hero-sub {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  margin-bottom: 32px;
+  line-height: 1.8;
+}
+
+.hero .btn-primary {
+  background: #fff;
+  color: #2563eb;
+  font-size: 1.05rem;
+  padding: 14px 40px;
+}
+
+.hero .btn-primary:hover {
+  background: #f0f4ff;
+  opacity: 1;
+}
+
+/* --- 特徴 --- */
+.features {
+  padding: 64px 0;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.feature-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.feature-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.feature-card p {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+/* --- 料金 --- */
+.pricing {
+  padding: 64px 0;
+  background: #fff;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.pricing-card {
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.pricing-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+  color: #2563eb;
+}
+
+.pricing-desc {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.pricing-options {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.pricing-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 20px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.pricing-option .duration {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.pricing-option .price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pricing-note {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 24px;
+}
+
+/* --- 申し込みフォーム --- */
+.apply {
+  padding: 64px 0;
+}
+
+.apply form {
+  max-width: 520px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 32px 24px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-group input.is-error {
+  border-color: #ef4444;
+}
+
+.form-group input.is-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* ラジオボタン */
+.radio-group {
+  display: flex;
+  gap: 16px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  accent-color: #2563eb;
+}
+
+/* サブドメイン入力 */
+.subdomain-input {
+  display: flex;
+  align-items: center;
+}
+
+.subdomain-input input {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  flex: 1;
+}
+
+.subdomain-suffix {
+  padding: 10px 12px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.form-error {
+  font-size: 0.8rem;
+  color: #ef4444;
+  margin-top: 4px;
+  min-height: 1.2em;
+}
+
+.form-status {
+  font-size: 0.8rem;
+  margin-top: 4px;
+  min-height: 1.2em;
+}
+
+.form-status.is-available {
+  color: #16a34a;
+}
+
+.form-status.is-taken {
+  color: #ef4444;
+}
+
+.form-status.is-checking {
+  color: #94a3b8;
+}
+
+.form-global-error {
+  font-size: 0.875rem;
+  color: #ef4444;
+  text-align: center;
+  margin-bottom: 12px;
+  min-height: 1.2em;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  font-size: 1.05rem;
+}
+
+/* --- メッセージページ（success / cancel） --- */
+.message-page {
+  padding: 80px 0;
+}
+
+.message-card {
+  max-width: 520px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 48px 32px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.message-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.message-icon.is-success {
+  background: #16a34a;
+}
+
+.message-icon.is-cancel {
+  background: #94a3b8;
+}
+
+.message-card h1 {
+  font-size: 1.25rem;
+  margin-bottom: 16px;
+}
+
+.message-card p {
+  font-size: 0.95rem;
+  color: #475569;
+  margin-bottom: 12px;
+  line-height: 1.8;
+}
+
+.message-note {
+  font-size: 0.8rem !important;
+  color: #94a3b8 !important;
+}
+
+.message-card .btn {
+  margin-top: 24px;
+}
+
+/* --- フッター --- */
+.footer {
+  padding: 32px 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* ========================================
+   PC (768px 以上)
+   ======================================== */
+@media (min-width: 768px) {
+  .hero {
+    padding: 96px 0;
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .apply form {
+    padding: 40px 32px;
+  }
+}

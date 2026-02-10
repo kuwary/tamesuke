@@ -1,0 +1,15 @@
+# Tamesuke API 追加依存関係
+# （既存の requirements.txt とは別管理）
+
+# Web フレームワーク
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+
+# Stripe
+stripe>=8.0.0
+
+# SendGrid
+sendgrid>=6.11.0
+
+# 設定管理
+pydantic-settings>=2.2.0
